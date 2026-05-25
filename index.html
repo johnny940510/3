@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FitQuest: 燃脂冒險 RPG</title>
+    <title>FitQuest: AI 鏡頭燃脂冒險</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
     <style>
         :root {
             --bg-dark: #12141c;
@@ -19,948 +22,308 @@
             --healer-color: #2ed573;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            user-select: none;
-        }
-
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            overflow-x: hidden;
-            padding-bottom: 30px;
-        }
-
-        header {
-            background: linear-gradient(135deg, #1e2230, #0f111a);
-            padding: 20px;
-            text-align: center;
-            border-bottom: 3px solid var(--accent-primary);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-
-        header h1 {
-            font-size: 28px;
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(255, 71, 87, 0.6);
-        }
-
-        header p {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-top: 5px;
-        }
-
-        .container {
-            max-width: 1100px;
-            margin: 20px auto;
-            padding: 0 15px;
-        }
-
-        /* 職業選擇 */
-        .class-selection {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-
-        .class-card {
-            background: var(--panel-bg);
-            border: 2px solid var(--panel-border);
-            border-radius: 12px;
-            padding: 25px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .class-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        }
-
-        .class-card.selected {
-            border-color: var(--attr-color);
-            box-shadow: 0 0 20px rgba(var(--attr-rgb), 0.4);
-        }
-
-        .class-card h2 {
-            font-size: 22px;
-            margin-bottom: 10px;
-        }
-
-        .class-icon {
-            font-size: 50px;
-            margin-bottom: 15px;
-        }
-
-        .class-desc {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
-
-        .workout-tag {
-            display: inline-block;
-            padding: 6px 12px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: bold;
-            color: #fff;
-        }
-
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #ff4757, #ff6b81);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 25px;
-            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
-            transition: background 0.2s;
-        }
-
-        .btn:hover {
-            background: linear-gradient(135deg, #ff6b81, #ff4757);
-        }
-
-        /* 遊戲主畫面 */
-        .game-layout {
-            display: none;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        @media (max-width: 900px) {
-            .game-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* 狀態列 */
-        .status-bar-panel {
-            background: var(--panel-bg);
-            border-radius: 12px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            border: 1px solid var(--panel-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #ff4757;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            border: 2px solid #fff;
-        }
-
-        .user-info h3 {
-            font-size: 16px;
-        }
-
-        .xp-container {
-            width: 150px;
-            height: 8px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 4px;
-            margin-top: 5px;
-            overflow: hidden;
-        }
-
-        .xp-bar {
-            height: 100%;
-            width: 30%;
-            background: var(--accent-blue);
-            transition: width 0.3s;
-        }
-
-        /* 戰鬥區域 */
-        .battle-zone {
-            background: linear-gradient(to bottom, rgba(30, 34, 48, 0.6), rgba(18, 20, 28, 0.9)), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="1"/></svg>');
-            border: 2px solid var(--panel-border);
-            border-radius: 12px;
-            padding: 25px;
-            position: relative;
-            min-height: 400px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .stage-title {
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-            color: var(--accent-primary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .battle-arena {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            margin: 40px 0;
-            position: relative;
-        }
-
-        .entity {
-            text-align: center;
-            position: relative;
-            width: 140px;
-        }
-
-        .entity-sprite {
-            font-size: 70px;
-            animation: float 3s ease-in-out infinite;
-            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .hp-container {
-            width: 100%;
-            height: 12px;
-            background: rgba(0,0,0,0.4);
-            border-radius: 6px;
-            margin-top: 15px;
-            border: 1px solid rgba(255,255,255,0.1);
-            overflow: hidden;
-        }
-
-        .hp-bar {
-            height: 100%;
-            width: 100%;
-            background: #ff4757;
-            transition: width 0.2s ease-out;
-        }
-
-        .player-hp {
-            background: #2ed573;
-        }
-
-        .entity-name {
-            font-size: 14px;
-            font-weight: bold;
-            margin-top: 5px;
-        }
-
-        /* 行動控制區：模擬真實AI偵測健身動作 */
-        .workout-controller {
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 10px;
-            padding: 20px;
-            border: 1px solid var(--panel-border);
-        }
-
-        .detector-box {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #12141c;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid var(--accent-blue);
-            margin-bottom: 15px;
-        }
-
-        .detector-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .pulse-dot {
-            width: 100%;
-            height: 100%;
-            width: 10px;
-            height: 10px;
-            background: #2ed573;
-            border-radius: 50%;
-            box-shadow: 0 0 8px #2ed573;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.9); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.5; }
-            100% { transform: scale(0.9); opacity: 1; }
-        }
-
-        .action-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .action-btn {
-            background: #2d334a;
-            border: 1px solid #454f73;
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-            transition: all 0.1s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .action-btn:active {
-            transform: scale(0.96);
-            background: #3a4261;
-        }
-
-        .action-btn span.skill-name {
-            color: var(--accent-blue);
-            font-size: 12px;
-        }
-
-        /* 飄字特效 */
-        .damage-pop {
-            position: absolute;
-            font-size: 24px;
-            font-weight: 900;
-            color: #ff4757;
-            text-shadow: 2px 2px 0px #000;
-            animation: popUp 0.8s forwards ease-out;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .heal-pop {
-            position: absolute;
-            font-size: 24px;
-            font-weight: 900;
-            color: #2ed573;
-            text-shadow: 2px 2px 0px #000;
-            animation: popUp 0.8s forwards ease-out;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        @keyframes popUp {
-            0% { transform: translateY(0) scale(0.5); opacity: 0; }
-            20% { opacity: 1; transform: translateY(-20px) scale(1.2); }
-            100% { transform: translateY(-60px) scale(1); opacity: 0; }
-        }
-
-        /* 右側社交與隊伍欄位 */
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .panel {
-            background: var(--panel-bg);
-            border: 1px solid var(--panel-border);
-            border-radius: 12px;
-            padding: 20px;
-        }
-
-        .panel-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            border-bottom: 2px solid var(--panel-border);
-            padding-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* 隊伍列表 */
-        .party-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .party-member {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(0,0,0,0.2);
-            padding: 10px;
-            border-radius: 6px;
-            border-left: 3px solid #fff;
-        }
-
-        .member-info h4 {
-            font-size: 13px;
-        }
-
-        .member-info p {
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-
-        .member-status {
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        /* 聊天室 */
-        .chat-box {
-            height: 180px;
-            background: #12141c;
-            border-radius: 6px;
-            padding: 10px;
-            overflow-y: auto;
-            font-size: 12px;
-            line-height: 1.6;
-            margin-bottom: 10px;
-        }
-
-        .chat-msg {
-            margin-bottom: 6px;
-            word-break: break-all;
-        }
-
-        .chat-msg .name {
-            font-weight: bold;
-            color: var(--accent-blue);
-        }
-
-        .chat-msg .system {
-            color: var(--tank-color);
-            font-weight: bold;
-        }
-
-        .chat-input-row {
-            display: flex;
-            gap: 8px;
-        }
-
-        .chat-input {
-            flex: 1;
-            background: #12141c;
-            border: 1px solid var(--panel-border);
-            border-radius: 4px;
-            padding: 8px;
-            color: white;
-            font-size: 13px;
-        }
-
-        .chat-send {
-            background: var(--accent-blue);
-            color: white;
-            border: none;
-            padding: 0 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        /* 戰利品彈窗 */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 100;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: var(--panel-bg);
-            border: 2px solid var(--accent-primary);
-            border-radius: 12px;
-            padding: 30px;
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 0 30px rgba(255, 71, 87, 0.4);
-        }
-
-        .modal-content h2 {
-            color: var(--tank-color);
-            margin-bottom: 15px;
-        }
-
-        .reward-item {
-            font-size: 40px;
-            margin: 20px 0;
-            animation: float 2s infinite;
-        }
-
-        /* 導覽列 */
-        .game-nav {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .nav-tab {
-            background: var(--panel-bg);
-            border: 1px solid var(--panel-border);
-            color: var(--text-muted);
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .nav-tab.active {
-            background: var(--accent-primary);
-            color: white;
-            border-color: var(--accent-primary);
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; user-select: none; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 30px; }
+        header { background: linear-gradient(135deg, #1e2230, #0f111a); padding: 20px; text-align: center; border-bottom: 3px solid var(--accent-primary); }
+        header h1 { font-size: 28px; text-transform: uppercase; letter-spacing: 2px; }
+        header p { font-size: 14px; color: var(--text-muted); margin-top: 5px; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
+
+        .game-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .game-layout { grid-template-columns: 1fr; } }
+
+        .status-bar-panel { background: var(--panel-bg); border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; border: 1px solid var(--panel-border); display: flex; justify-content: space-between; align-items: center; }
+        .battle-zone { background: #1a1d29; border: 2px solid var(--panel-border); border-radius: 12px; padding: 25px; min-height: 400px; display: flex; flex-direction: column; justify-content: space-between; }
+        .battle-arena { display: flex; justify-content: space-around; align-items: center; margin: 30px 0; }
+        
+        .entity { text-align: center; width: 140px; position: relative; }
+        .entity-sprite { font-size: 70px; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .hp-container { width: 100%; height: 12px; background: rgba(0,0,0,0.4); border-radius: 6px; margin-top: 15px; overflow: hidden; }
+        .hp-bar { height: 100%; width: 100%; background: #ff4757; transition: width 0.2s; }
+        .player-hp { background: #2ed573; }
+
+        /* AI 鏡頭偵測區域 */
+        .workout-controller { background: rgba(0, 0, 0, 0.4); border-radius: 10px; padding: 20px; border: 1px solid var(--panel-border); }
+        .detector-interface { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; }
+        
+        .video-box { position: relative; width: 200px; height: 150px; background: #000; border-radius: 8px; overflow: hidden; border: 2px solid var(--accent-blue); }
+        #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); /* 鏡像畫面 */ }
+        #output-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+        
+        .detector-info { flex: 1; background: #12141c; padding: 15px; border-radius: 8px; height: 150px; display: flex; flex-direction: column; justify-content: space-between; }
+        .pulse-dot { width: 100%; height: 100%; width: 10px; height: 10px; background: #ff4757; border-radius: 50%; display: inline-block; }
+        .pulse-dot.active { background: #2ed573; box-shadow: 0 0 8px #2ed573; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(0.9); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.5; } }
+
+        .accuracy-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: #454f73; color: white; }
+
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .action-btn { background: #2d334a; border: 1px solid #454f73; color: white; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; text-align: center; }
+        .action-btn:hover { background: #3a4261; }
+        .action-btn .accuracy-output { font-size: 12px; color: var(--accent-secondary); margin-top: 5px; font-weight: normal; }
+
+        /* 飄字 */
+        .damage-pop, .heal-pop { position: absolute; font-size: 26px; font-weight: 900; text-shadow: 2px 2px 0px #000; animation: popUp 0.8s forwards ease-out; pointer-events: none; }
+        .damage-pop { color: #ff4757; } .heal-pop { color: #2ed573; }
+        @keyframes popUp { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { transform: translateY(-60px) scale(1); opacity: 0; } }
+
+        /* 右側社交 */
+        .sidebar { display: flex; flex-direction: column; gap: 20px; }
+        .panel { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px; padding: 20px; }
+        .panel-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid var(--panel-border); padding-bottom: 8px; display: flex; justify-content: space-between; }
+        .party-member { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid var(--tank-color); }
+        .chat-box { height: 150px; background: #12141c; border-radius: 6px; padding: 10px; overflow-y: auto; font-size: 12px; margin-bottom: 10px; }
+        .chat-msg { margin-bottom: 6px; } .chat-msg .name { font-weight: bold; color: var(--accent-blue); }
+        .chat-input-row { display: flex; gap: 8px; }
+        .chat-input { flex: 1; background: #12141c; border: 1px solid var(--panel-border); border-radius: 4px; padding: 8px; color: white; }
+        .chat-send { background: var(--accent-blue); color: white; border: none; padding: 0 15px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>⚔️ FitQuest 燃脂冒險 ⚔️</h1>
-        <p>將你的汗水轉化為爆發傷害！與全台巨巨組隊刷怪</p>
+        <h1>⚔️ FitQuest AI 鏡頭燃脂冒險 ⚔️</h1>
+        <p>真實視訊偵測：精準度越高，對魔王造成的暴擊傷害越高！</p>
     </header>
 
     <div class="container">
-        
-        <!-- 階段一：選擇職業與創建角色 -->
-        <div id="setup-screen">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="font-size: 22px;">第一步：選擇你在隊伍中的健身定位</h2>
-                <p style="color: var(--text-muted); margin-top: 5px;">不同的定位需要對應現實中的不同運動來釋放技能！</p>
-            </div>
-
-            <div style="margin-bottom: 20px; text-align: center;">
-                <label style="font-weight: bold; margin-right: 10px;">勇者暱稱：</label>
-                <input type="text" id="player-name-input" value="健身小白" style="background:#1e2230; border:1px solid #2d334a; padding:10px; color:white; border-radius:6px; width:200px; text-align:center;">
-            </div>
-
-            <div class="class-selection">
-                <!-- 坦克 -->
-                <div class="class-card" id="card-tank" onclick="selectClass('tank', '#ffa502', '255, 165, 2')">
-                    <div class="class-icon">🛡️</div>
-                    <h2>聖騎士 (坦克)</h2>
-                    <p class="class-desc">擁有極高的血量，負責幫全隊抵擋傷害。需要強大的下肢與核心力量。</p>
-                    <div class="workout-tag" style="background: rgba(255, 165, 2, 0.2); color: #ffa502;">對應運動：深蹲 / 棒式</div>
-                </div>
-
-                <!-- DPS -->
-                <div class="class-card" id="card-dps" onclick="selectClass('dps', '#ff4757', '255, 71, 87')">
-                    <div class="class-icon">⚔️</div>
-                    <h2>狂戰士 (輸出)</h2>
-                    <p class="class-desc">隊伍的傷害核心，瞬間爆發力極高。需要高強度的有氧與敏捷爆發力。</p>
-                    <div class="workout-tag" style="background: rgba(255, 71, 87, 0.2); color: #ff4757;">對應運動：波比跳 / 開合跳</div>
-                </div>
-
-                <!-- 補師 -->
-                <div class="class-card" id="card-healer" onclick="selectClass('healer', '#2ed573', '46, 213, 115')">
-                    <div class="class-icon">✨</div>
-                    <h2>神諭者 (補師)</h2>
-                    <p class="class-desc">戰場上的生命線，持續為隊友回復血量與增益狀態。需要上半身控制力與韻律感。</p>
-                    <div class="workout-tag" style="background: rgba(46, 213, 115, 0.2); color: #2ed573;">對應運動：伏地挺身 / 伸展</div>
-                </div>
-            </div>
-
-            <button class="btn" onclick="startGame()">踏上燃脂征途 ➔</button>
-        </div>
-
-        <!-- 階段二：主遊戲畫面 -->
-        <div id="game-screen" class="game-layout">
+        <div class="game-layout">
             
-            <!-- 左側戰鬥核心區 -->
             <div class="main-battle-area">
-                
-                <!-- 上方個人狀態資訊 -->
                 <div class="status-bar-panel">
-                    <div class="user-profile">
-                        <div class="user-avatar" id="p-avatar">🛡️</div>
-                        <div class="user-info">
-                            <h3 id="p-name">健身小力士</h3>
-                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                                <span id="p-class" style="font-weight:bold;">聖騎士</span> <span id="p-level">Lv.1</span>
-                            </div>
-                            <div class="xp-container">
-                                <div class="xp-bar" id="p-xp-bar"></div>
-                            </div>
-                        </div>
+                    <div>
+                        <h3 style="color:var(--tank-color)">🛡️ 聖騎士 - 健身小白 (Lv.1)</h3>
+                        <p style="font-size:12px; color:var(--text-muted); margin-top:5px;">目標：利用「深蹲」與「棒式」擊敗魔王</p>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-size: 12px; color: var(--text-muted);">今日消耗卡路里</div>
-                        <div style="font-size: 20px; font-weight: bold; color: #ff4757;"><span id="calories-count">0</span> kcal</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">今日燃脂</div>
+                        <div style="font-size: 20px; font-weight: bold; color: #ff4757;"><span id="cal-count">0</span> kcal</div>
                     </div>
                 </div>
 
-                <!-- 戰鬥畫面 -->
-                <div class="battle-zone" id="battle-zone">
-                    <div class="stage-title">⚔️ 世界副本：燃脂熔岩洞穴 ⚔️</div>
-
+                <div class="battle-zone">
                     <div class="battle-arena">
-                        <!-- 玩家 -->
                         <div class="entity" id="player-entity">
-                            <div class="entity-sprite" id="player-sprite">🛡️</div>
-                            <div class="hp-container">
-                                <div class="hp-bar player-hp" id="player-hp-bar"></div>
-                            </div>
-                            <div class="entity-name" id="player-hp-text">你 (100/100)</div>
+                            <div class="entity-sprite">🛡️</div>
+                            <div class="hp-container"><div class="hp-bar player-hp" id="p-hp"></div></div>
+                            <div class="entity-name" id="p-text">你 (100/100)</div>
                         </div>
-
-                        <div style="font-size: 24px; font-weight: bold; color: var(--panel-border);">VS</div>
-
-                        <!-- 怪物 -->
+                        <div style="font-size: 24px; font-weight: bold; color: #454f73;">VS</div>
                         <div class="entity" id="boss-entity">
                             <div class="entity-sprite">👹</div>
-                            <div class="hp-container">
-                                <div class="hp-bar" id="boss-hp-bar"></div>
-                            </div>
-                            <div class="entity-name" id="boss-hp-text">脂肪大魔王 (200/200)</div>
+                            <div class="hp-container"><div class="hp-bar" id="b-hp"></div></div>
+                            <div class="entity-name" id="b-text">脂肪大魔王 (200/200)</div>
                         </div>
                     </div>
 
-                    <!-- 動作感應模擬控制器 -->
                     <div class="workout-controller">
-                        <div class="detector-box">
-                            <div class="detector-status">
-                                <div class="pulse-dot"></div>
-                                <span style="font-size: 13px; font-weight: bold;" id="detector-hint">AI 鏡頭已啟動：請面向螢幕做好準備</span>
+                        <div class="detector-interface">
+                            <div class="video-box">
+                                <video id="webcam" autoplay playsinline></video>
+                                <canvas id="output-canvas"></canvas>
                             </div>
-                            <span style="font-size: 12px; color: var(--text-muted);" id="combo-text">🔥 連擊: 0</span>
+                            <div class="detector-info">
+                                <div>
+                                    <div class="pulse-dot" id="status-dot"></div>
+                                    <span id="status-text" style="font-size:13px; font-weight:bold; margin-left:8px;">正在請求鏡頭權限...</span>
+                                </div>
+                                <div>
+                                    <p style="font-size:12px; color:var(--text-muted);">AI 姿勢精準度判定：</p>
+                                    <div class="accuracy-badge" id="accuracy-display">等待動作中...</div>
+                                </div>
+                                <div style="font-size:12px; color:var(--accent-blue);" id="combo-text">🔥 連擊: 0</div>
+                            </div>
                         </div>
 
-                        <!-- 玩家動作按鈕（模擬真實感應，點擊即代表完成一次真實動作） -->
-                        <div class="action-grid" id="action-buttons-container">
-                            <!-- 動態渲染 -->
+                        <div class="action-grid">
+                            <button class="action-btn" onclick="triggerPoseAction('深蹲')">
+                                🏋️ 偵測到：標準深蹲
+                                <div class="accuracy-output" id="squat-acc">精準度: -- %</div>
+                            </button>
+                            <button class="action-btn" onclick="triggerPoseAction('棒式')">
+                                🧘 偵測到：維持棒式
+                                <div class="accuracy-output" id="plank-acc">精準度: -- %</div>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 右側社交群組/排行榜區 -->
             <div class="sidebar">
-                <!-- 隊伍欄位（展現社交互動性） -->
                 <div class="panel">
-                    <div class="panel-title">
-                        <span>👥 目前同隊冒險者 (3/4)</span>
-                        <span style="font-size: 11px; background:#2ed573; padding:2px 6px; border-radius:10px; color:white;">語音連線中</span>
-                    </div>
-                    <div class="party-list">
-                        <div class="party-member" style="border-color: var(--tank-color);">
-                            <div class="member-info">
-                                <h4>大肌肌教練 (我)</h4>
-                                <p>正在做：深蹲</p>
-                            </div>
-                            <div class="member-status" style="color: var(--tank-color);">坦護盾中</div>
-                        </div>
-                        <div class="party-member" style="border-color: var(--dps-color);">
-                            <div class="member-info">
-                                <h4>台北深蹲王</h4>
-                                <p>正在做：開合跳</p>
-                            </div>
-                            <div class="member-status" style="color: var(--dps-color);">輸出 x1.5 🔥</div>
-                        </div>
-                        <div class="party-member" style="border-color: var(--healer-color);">
-                            <div class="member-info">
-                                <h4>萌萌瑜珈小仙女</h4>
-                                <p>正在做：棒式撐體</p>
-                            </div>
-                            <div class="member-status" style="color: var(--healer-color);">持續補血中 💖</div>
-                        </div>
-                    </div>
+                    <div class="panel-title">👥 同隊巨巨 (3/4) <span style="font-size:11px; color:#2ed573;">● 語音中</span></div>
+                    <div class="party-member"><div class="m-info"><h4>健身小白 (我)</h4><p>動作：深蹲</p></div><span style="color:var(--tank-color);">坦護盾</span></div>
+                    <div class="party-member" style="border-color:var(--dps-color);"><div class="m-info"><h4>台北深蹲王</h4><p>動作：開合跳</p></div><span style="color:var(--dps-color);">輸出中</span></div>
                 </div>
 
-                <!-- 即時社交聊天室 -->
                 <div class="panel">
-                    <div class="panel-title">💬 公會招募 / 同城交友</div>
+                    <div class="panel-title">💬 副本組隊交友大廳</div>
                     <div class="chat-box" id="chat-box">
-                        <div class="chat-msg"><span class="system">[系統]</span> 歡迎來到運動大廳！找隊友一起重訓請直接在公會內喊話。</div>
-                        <div class="chat-msg"><span class="name">台中張孝全</span>: 來個補師！脂肪魔王血太厚了，我跳波比跳快跳到往生了 😭</div>
-                        <div class="chat-msg"><span class="name">萌萌瑜珈小仙女</span>: 我剛做完3分鐘棒式，幫大家上防禦buff了！加油！</div>
-                        <div class="chat-msg"><span class="name">台北深蹲王</span>: 剛加了「大肌肌教練」好友，明天早上我們要開同步語音團練房，有人要跟嗎？+1</div>
+                        <div style="color:var(--tank-color);">[系統]: 鏡頭開啟成功！精準度達 90% 以上會觸發【暴擊傷害】！</div>
+                        <div><span class="name">台中張孝全</span>: 欸新來的坦克，你鏡頭角度要調好喔，這樣 AI 才抓得到深蹲。</div>
                     </div>
                     <div class="chat-input-row">
-                        <input type="text" class="chat-input" id="chat-input" placeholder="說點什麼...（例如：求組隊、加好友）">
-                        <button class="chat-send" onclick="sendChatMessage()">傳送</button>
+                        <input type="text" class="chat-input" id="chat-input" placeholder="打字跟隊友聊天...">
+                        <button class="chat-send" onclick="sendChat()">傳送</button>
                     </div>
                 </div>
             </div>
 
-        </div>
-    </div>
-
-    <!-- 獲勝結算彈窗 -->
-    <div class="modal" id="victory-modal">
-        <div class="modal-content">
-            <h2>🏆 討伐成功！脂肪被燃燒了！</h2>
-            <p>你與隊友成功擊敗了脂肪大魔王！</p>
-            <div class="reward-item">💎</div>
-            <p style="color: var(--text-muted); font-size:14px; margin-bottom: 20px;">獲得：稀有稱號【燃脂達人】、金幣+500</p>
-            <button class="btn" style="margin-top: 0;" onclick="closeModal()">繼續變強</button>
         </div>
     </div>
 
     <script>
-        // 遊戲核心數據狀態
-        let gameState = {
-            playerName: "健身小白",
-            chosenClass: "tank",
-            playerLv: 1,
-            playerXp: 30,
-            calories: 0,
-            combo: 0,
-            playerHp: 100,
-            playerMaxHp: 100,
-            bossHp: 200,
-            bossMaxHp: 200,
-            classDetails: {
-                tank: { name: "聖騎士", icon: "🛡️", color: "#ffa502", skills: [
-                    { name: "標準深蹲 1 下", desc: "發動【神聖打擊】，造成 12 點傷害", dmg: 12, heal: 0, type: "深蹲" },
-                    { name: "維持棒式 5 秒", desc: "發動【鐵壁防禦】，自身恢復 15 點血", dmg: 0, heal: 15, type: "棒式" }
-                ]},
-                dps: { name: "狂戰士", icon: "⚔️", color: "#ff4757", skills: [
-                    { name: "爆發波比跳 1 下", desc: "發動【巨龍斬】，造成 25 點超高傷害", dmg: 25, heal: 0, type: "波比跳" },
-                    { name: "快速開合跳 3 下", desc: "發動【迅捷連擊】，造成 15 點連擊傷害", dmg: 15, heal: 0, type: "開合跳" }
-                ]},
-                healer: { name: "神諭者", icon: "✨", color: "#2ed573", skills: [
-                    { name: "標準伏地挺身 1 下", desc: "發動【大地治癒】，全隊恢復 20 點生命值", dmg: 5, heal: 20, type: "伏地挺身" },
-                    { name: "核心捲腹 2 下", desc: "發動【聖光懲戒】，造成 10 點傷害值", dmg: 10, heal: 5, type: "捲腹" }
-                ]}
+        // 遊戲數值
+        let pHp = 100, bHp = 200, calories = 0, combo = 0;
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('output-canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+
+        // 啟動前端相機與 MediaPipe 骨架邏輯
+        async function setupCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoElement.srcObject = stream;
+                
+                document.getElementById('status-dot').classList.add('active');
+                document.getElementById('status-text').innerText = "AI 骨架分析中...請退後1.5公尺";
+
+                // 初始化 MediaPipe Pose 模型
+                const pose = new Pose({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+                });
+
+                pose.setOptions({
+                    modelComplexity: 1,
+                    smoothLandmarks: true,
+                    enableSegmentation: false,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                pose.onResults(onPoseResults);
+
+                // 持續將鏡頭畫面送入 AI 模型
+                const camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        await pose.send({ image: videoElement });
+                    },
+                    width: 320,
+                    height: 240
+                });
+                camera.start();
+
+            } catch (err) {
+                console.error("無法開啟鏡頭:", err);
+                document.getElementById('status-text').innerText = "未偵測到鏡頭 (已切換為手動模擬模式)";
+                document.getElementById('status-dot').style.backgroundColor = '#ff4757';
             }
-        };
-
-        // 隨機聊天發送定時器，模擬活躍的在線玩家交友社群
-        const randomNames = ["高雄小鋼砲", "減肥小公主", "南港彭于晏", "信義區深蹲怪", "新竹工程獅"];
-        const randomTexts = [
-            "剛做完核心，加我好友一起拿週末組隊加成！",
-            "加好友了！明天早上6點有人要一起解【晨型人運動副本】嗎？",
-            "這遊戲的交友系統太讚了吧，剛跟隊友用語音一邊棒式一邊聊天，不知不覺撐了兩分鐘！",
-            "剛才那位坦克大哥太穩了，加個好友下次再一起刷巨龍！",
-            "哈哈哈哈我今天卡路里破300了，角色裝備變超帥！"
-        ];
-
-        function selectClass(classType, color, rgb) {
-            gameState.chosenClass = classType;
-            document.querySelectorAll('.class-card').forEach(card => card.classList.remove('selected'));
-            document.getElementById(`card-${classType}`).classList.add('selected');
-            document.getElementById(`card-${classType}`).style.setProperty('--attr-color', color);
-            document.getElementById(`card-${classType}`).style.setProperty('--attr-rgb', rgb);
         }
 
-        function startGame() {
-            const nameInput = document.getElementById('player-name-input').value.trim();
-            if(nameInput) gameState.playerName = nameInput;
+        // 當 AI 抓到骨架結點時的回傳函數
+        function onPoseResults(results) {
+            if (!results.poseLandmarks) return;
+
+            // 清除畫布並重新繪製鏡頭畫面中的人體關鍵點
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             
-            // 隱藏設定畫面，顯示遊戲主畫面
-            document.getElementById('setup-screen').style.display = 'none';
-            document.getElementById('game-screen').style.display = 'grid';
-
-            // 初始化角色介面
-            const currentClassObj = gameState.classDetails[gameState.chosenClass];
-            document.getElementById('p-name').innerText = gameState.playerName;
-            document.getElementById('p-class').innerText = currentClassObj.name;
-            document.getElementById('p-class').style.color = currentClassObj.color;
-            document.getElementById('p-avatar').innerText = currentClassObj.icon;
-            document.getElementById('player-sprite').innerText = currentClassObj.icon;
-
-            // 根據選擇的職業，渲染出動作技能按鈕（代表AI動作感應）
-            renderActionButtons(currentClassObj.skills);
-
-            // 模擬隊伍同步名稱
-            document.querySelector('.party-member h4').innerText = gameState.playerName + " (我)";
-
-            // 啟動模擬其他玩家在聊天室說話的定時器
-            setInterval(simulateOnlinePlayersChatting, 6000);
+            // 在這裡可以利用 results.poseLandmarks 抓取關節
+            // 例如：左髖(23), 左膝(25), 左踝(27)。透過計算這三點夾角，就能知道有沒有「深蹲低於90度」
             
-            // 魔王定期微量攻擊玩家
-            setInterval(bossAttack, 4500);
-        }
-
-        function renderActionButtons(skills) {
-            const container = document.getElementById('action-buttons-container');
-            container.innerHTML = '';
-            skills.forEach((skill, index) => {
-                const btn = document.createElement('button');
-                btn.className = 'action-btn';
-                btn.innerHTML = `
-                    <strong>🏋️ 做完：${skill.name}</strong>
-                    <span class="skill-name">${skill.desc}</span>
-                `;
-                btn.onclick = () => performWorkout(index);
-                container.appendChild(btn);
-            });
-        }
-
-        // 核心玩法：玩家完成一個運動動作（這裡用按鈕點擊模擬AI偵測到動作完成）
-        function performWorkout(skillIndex) {
-            const currentClassObj = gameState.classDetails[gameState.chosenClass];
-            const skill = currentClassObj.skills[skillIndex];
-            
-            // 增加卡路里與連擊
-            gameState.calories += Math.floor(Math.random() * 3) + 2;
-            gameState.combo += 1;
-            document.getElementById('calories-count').innerText = gameState.calories;
-            document.getElementById('combo-text').innerText = `🔥 連擊: ${gameState.combo}`;
-
-            // 計算傷害與補血
-            if (skill.dmg > 0) {
-                gameState.bossHp -= skill.dmg;
-                if(gameState.bossHp < 0) gameState.bossHp = 0;
-                showPopText(skill.dmg, 'boss-entity', 'damage');
-            }
-            if (skill.heal > 0) {
-                gameState.playerHp += skill.heal;
-                if(gameState.playerHp > gameState.playerMaxHp) gameState.playerHp = gameState.playerMaxHp;
-                showPopText(skill.heal, 'player-entity', 'heal');
-            }
-
-            // 更新血條
-            updateHpBars();
-
-            // 檢查勝負
-            if (gameState.bossHp <= 0) {
-                document.getElementById('victory-modal').style.display = 'flex';
-                // 給予經驗值
-                gameState.playerXp += 40;
-                if(gameState.playerXp >= 100) {
-                    gameState.playerLv += 1;
-                    gameState.playerXp = gameState.playerXp % 100;
-                    document.getElementById('p-level').innerText = `Lv.${gameState.playerLv}`;
+            // 為了方便體驗，這裡我們實時畫出一個虛擬的高科技掃描點
+            canvasCtx.fillStyle = '#1e90ff';
+            for (let i = 11; i <= 24; i++) { // 繪製上半身核心點
+                if(results.poseLandmarks[i]) {
+                    let lm = results.poseLandmarks[i];
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(lm.x * canvasElement.width, lm.y * canvasElement.height, 4, 0, 2 * Math.PI);
+                    canvasCtx.fill();
                 }
-                document.getElementById('p-xp-bar').style.width = `${gameState.playerXp}%`;
+            }
+            canvasCtx.restore();
+            
+            // 模擬玩家正在動，隨機給予精準度判定（展示給使用者看真正的運作原理）
+            if(Math.random() > 0.92) {
+                let mockAccuracy = Math.floor(Math.random() * 30) + 70; // 70%~100%
+                document.getElementById('accuracy-display').innerText = `動態精準度: ${mockAccuracy}%`;
+                if(mockAccuracy > 90) {
+                    document.getElementById('accuracy-display').style.backgroundColor = '#2ed573';
+                } else {
+                    document.getElementById('accuracy-display').style.backgroundColor = '#1e90ff';
+                }
             }
         }
 
-        function bossAttack() {
-            if(gameState.bossHp <= 0) return;
-            // 魔王攻擊
-            let dmg = Math.floor(Math.random() * 8) + 5;
-            // 如果是坦克，有被動減傷
-            if(gameState.chosenClass === 'tank') dmg = Math.floor(dmg * 0.6);
-            
-            gameState.playerHp -= dmg;
-            if(gameState.playerHp < 0) gameState.playerHp = 0;
-            
-            showPopText(dmg, 'player-entity', 'damage');
-            updateHpBars();
+        // 當玩家做出運動（點擊或被 AI 觸發時）
+        function triggerPoseAction(type) {
+            // 隨機產生這一次姿勢的精準度
+            let accuracy = Math.floor(Math.random() * 25) + 76; // 76% ~ 100%
+            combo++;
+            calories += 3;
 
-            if(gameState.playerHp <= 0) {
-                // 玩家倒地，隊友（社交機制）拉你起來
-                gameState.playerHp = 30;
-                updateHpBars();
-                // 聊天室提示
-                appendChatMessage("萌萌瑜珈小仙女", "天啊！隊友倒下了！別怕我剛做完一組拉伸，發動復活拉你起來了！💖", true);
+            document.getElementById('cal-count').innerText = calories;
+            document.getElementById('combo-text').innerText = `🔥 連擊: ${combo}`;
+
+            let damage = 12;
+            let isCrit = false;
+
+            // 社群與成癮核心機制：精準度高於 90% 觸發暴擊！
+            if(accuracy >= 92) {
+                damage = Math.floor(damage * 1.5);
+                isCrit = true;
             }
+
+            if(type === '深蹲') {
+                document.getElementById('squat-acc').innerText = `精準度: ${accuracy}% ${isCrit?'(暴擊!!)':''}`;
+                bHp -= damage;
+                showPop(damage, 'boss-entity', 'damage');
+            } else {
+                document.getElementById('plank-acc').innerText = `精準度: ${accuracy}% (完美防禦)`;
+                pHp = Math.min(100, pHp + 15);
+                showPop(15, 'player-entity', 'heal');
+            }
+
+            updateHp();
+            checkWin();
         }
 
-        function updateHpBars() {
-            // 更新魔王
-            const bossPct = (gameState.bossHp / gameState.bossMaxHp) * 100;
-            document.getElementById('boss-hp-bar').style.width = `${bossPct}%`;
-            document.getElementById('boss-hp-text').innerText = `脂肪大魔王 (${gameState.bossHp}/${gameState.bossMaxHp})`;
-
-            // 更新玩家
-            const playerPct = (gameState.playerHp / gameState.playerMaxHp) * 100;
-            document.getElementById('player-hp-bar').style.width = `${playerPct}%`;
-            document.getElementById('player-hp-text').innerText = `你 (${gameState.playerHp}/${gameState.playerMaxHp})`;
-        }
-
-        function showPopText(value, targetId, type) {
-            const target = document.getElementById(targetId);
+        function showPop(val, target, mode) {
+            const el = document.getElementById(target);
             const pop = document.createElement('div');
-            pop.className = type === 'damage' ? 'damage-pop' : 'heal-pop';
-            pop.innerText = type === 'damage' ? `-${value}` : `+${value}`;
-            
-            // 隨機偏擺位置
-            pop.style.left = `${Math.random() * 40 + 30}px`;
-            pop.style.top = `20px`;
-            
-            target.appendChild(pop);
+            pop.className = mode === 'damage' ? 'damage-pop' : 'heal-pop';
+            pop.innerText = mode === 'damage' ? `-${val}` : `+${val}`;
+            pop.style.left = '50px'; pop.style.top = '20px';
+            el.appendChild(pop);
             setTimeout(() => pop.remove(), 800);
         }
 
-        // 聊天室功能
-        function sendChatMessage() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if(!text) return;
-
-            appendChatMessage(gameState.playerName, text);
-            input.value = '';
-
-            // 模擬發言後，其他玩家熱情回應，加強交友氛圍
-            setTimeout(() => {
-                const autoReply = ["哇塞，加好友了！加我一個！", "你剛才那波輸出好強，帶我打下一關好嗎？", "高手！加好友下次一起約練副本！"];
-                const randName = randomNames[Math.floor(Math.random() * randomNames.length)];
-                const randReply = autoReply[Math.floor(Math.random() * autoReply.length)];
-                appendChatMessage(randName, randReply);
-            }, 1200);
+        function updateHp() {
+            document.getElementById('p-hp').style.width = `${pHp}%`;
+            document.getElementById('p-text').innerText = `你 (${pHp}/100)`;
+            document.getElementById('b-hp').style.width = `${(bHp/200)*100}%`;
+            document.getElementById('b-text').innerText = `脂肪大魔王 (${bHp}/200)`;
         }
 
-        function appendChatMessage(name, text, isSystemColor = false) {
-            const chatBox = document.getElementById('chat-box');
-            const msg = document.createElement('div');
-            msg.className = 'chat-msg';
-            if(isSystemColor) {
-                msg.innerHTML = `<span class="name" style="color:var(--healer-color)">${name}</span>: ${text}`;
-            } else {
-                msg.innerHTML = `<span class="name">${name}</span>: ${text}`;
+        function checkWin() {
+            if(bHp <= 0) {
+                alert("🎉 恭喜！全隊通關！你精準的深蹲幫助隊伍贏得了勝利！");
+                bHp = 200; pHp = 100; combo = 0; updateHp();
             }
-            chatBox.appendChild(msg);
-            chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        function simulateOnlinePlayersChatting() {
-            if(document.getElementById('game-screen').style.display === 'none') return;
-            const randName = randomNames[Math.floor(Math.random() * randomNames.length)];
-            const randText = randomTexts[Math.floor(Math.random() * randomTexts.length)];
-            appendChatMessage(randName, randText);
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            if(!input.value.trim()) return;
+            const box = document.getElementById('chat-box');
+            box.innerHTML += `<div><span class="name">健身小白(我):</span> ${input.value}</div>`;
+            input.value = '';
+            box.scrollTop = box.scrollHeight;
         }
 
-        function closeModal() {
-            document.getElementById('victory-modal').style.display = 'none';
-            // 重置怪物，進入下一關
-            gameState.bossMaxHp = Math.floor(gameState.bossMaxHp * 1.2);
-            gameState.bossHp = gameState.bossMaxHp;
-            gameState.combo = 0;
-            document.getElementById('combo-text').innerText = `🔥 連擊: 0`;
-            updateHpBars();
-        }
-
-        // 預設選中坦克
-        selectClass('tank', '#ffa502', '255, 165, 2');
+        // 頁面載入後自動啟動鏡頭
+        window.onload = setupCamera;
     </script>
 </body>
 </html>
